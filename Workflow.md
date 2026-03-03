@@ -66,6 +66,14 @@ npm run mock:server
 
 Команда запускает тестовый REST API c данными из `mocks/mock-server-data.json` на порту `3123`.
 
+#### Запустить приложение с красивым форматом логов
+
+```bash
+npm run start:pretty
+```
+
+Запускает приложение и форматирует вывод `pino` через `pino-pretty`.
+
 #### Запустить проект
 
 ```bash
