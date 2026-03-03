@@ -1,0 +1,91 @@
+{
+  "titles": [
+    "Уютная квартира в центре Амстердама",
+    "Маленький отель в самом сердце Парижа",
+    "Просторный дом для большой компании",
+    "Светлая студия рядом с парком в Кёльне",
+    "Комната недалеко от центра Брюсселя",
+    "Апартаменты с видом на набережную в Дюссельдорфе"
+  ],
+  "descriptions": [
+    "Замечательное жилье с видом на каналы. Полностью укомплектована техникой для комфортного проживания.",
+    "Уютный номер для двоих. В пешей доступности от главных достопримечательностей и лучших кафе города.",
+    "Тихий район, большой сад и зона для барбекю. Идеально подходит для семейного отдыха или праздников.",
+    "Новая мебель, быстрый интернет и удобное расположение рядом с метро и магазинами.",
+    "Небольшая, но удобная комната для краткосрочной аренды с базовыми удобствами.",
+    "Тихий двор, современный ремонт и удобный выезд в центр города."
+  ],
+  "cities": [
+    "Amsterdam",
+    "Paris",
+    "Hamburg",
+    "Cologne",
+    "Brussels",
+    "Dusseldorf"
+  ],
+  "previewImages": [
+    "preview-1.jpg",
+    "preview-hotel.jpg",
+    "house-main.jpg",
+    "preview-cologne.jpg",
+    "preview-brussels.jpg",
+    "preview-dusseldorf.jpg"
+  ],
+  "images": [
+    ["photo1.jpg", "photo2.jpg", "photo3.jpg", "photo4.jpg", "photo5.jpg", "photo6.jpg"],
+    ["h1.jpg", "h2.jpg", "h3.jpg", "h4.jpg", "h5.jpg", "h6.jpg"],
+    ["house1.jpg", "house2.jpg", "house3.jpg", "house4.jpg", "house5.jpg", "house6.jpg"],
+    ["cologne1.jpg", "cologne2.jpg", "cologne3.jpg", "cologne4.jpg", "cologne5.jpg", "cologne6.jpg"],
+    ["brussels1.jpg", "brussels2.jpg", "brussels3.jpg", "brussels4.jpg", "brussels5.jpg", "brussels6.jpg"],
+    ["dusseldorf1.jpg", "dusseldorf2.jpg", "dusseldorf3.jpg", "dusseldorf4.jpg", "dusseldorf5.jpg", "dusseldorf6.jpg"]
+  ],
+  "isPremiumValues": [true, false],
+  "isFavoriteValues": [true, false],
+  "ratings": [4.8, 4.2, 5.0, 4.6, 4.1, 4.9],
+  "housingTypes": ["apartment", "hotel", "house", "room", "room", "apartment"],
+  "bedrooms": [3, 1, 5, 2, 1, 2],
+  "maxAdults": [4, 2, 10, 3, 1, 4],
+  "prices": [2500, 1200, 8500, 1800, 900, 2100],
+  "goods": [
+    ["Breakfast", "Washer", "Towels", "Fridge"],
+    ["Air conditioning", "Fridge"],
+    ["Breakfast", "Air conditioning", "Washer", "Fridge", "Baby seat"],
+    ["Fridge", "Towels", "Washer"],
+    ["Air conditioning", "Towels"],
+    ["Breakfast", "Fridge", "Air conditioning", "Washer"]
+  ],
+  "names": ["Ivan", "Elena", "Mikhail", "Anna", "Sergey", "Olga"],
+  "emails": [
+    "test@gmail.com",
+    "test1@gmail.com",
+    "test2@gmail.com",
+    "test3@gmail.com",
+    "test4@gmail.com",
+    "test5@gmail.com"
+  ],
+  "avatarPaths": [
+    "avatar-ivan.jpg",
+    "default-avatar.png",
+    "mike.png",
+    "anna.png",
+    "sergey.png",
+    "olga.png"
+  ],
+  "passwords": [
+    "secret123456",
+    "password789",
+    "secure_pass_1",
+    "secure_pass_2",
+    "secure_pass_3",
+    "secure_pass_4"
+  ],
+  "userTypes": ["pro", "regular"],
+  "locations": [
+    { "latitude": 52.370216, "longitude": 4.895168 },
+    { "latitude": 48.85661, "longitude": 2.351499 },
+    { "latitude": 53.550341, "longitude": 10.000654 },
+    { "latitude": 50.938361, "longitude": 6.959974 },
+    { "latitude": 50.846557, "longitude": 4.351697 },
+    { "latitude": 51.225402, "longitude": 6.776314 }
+  ]
+}

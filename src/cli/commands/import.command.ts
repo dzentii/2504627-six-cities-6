@@ -24,7 +24,7 @@ export default class ImportCommand implements CommandInterface {
     });
 
     try {
-      fileReader.read();
+      await fileReader.read();
     } catch (err) {
       console.error(chalk.bgRed.white(` Ошибка чтения: ${err instanceof Error ? err.message : err} `));
     }

@@ -6,7 +6,7 @@ import { CommandInterface } from './command.interface.js';
 export default class VersionCommand implements CommandInterface {
   public readonly name = '--version';
 
-  private readVersion(): string {
+  private static readVersion(): string {
     const jsonContent = readFileSync(resolve('./package.json'), 'utf-8');
     const importedData = JSON.parse(jsonContent);
     return importedData.version;
@@ -14,7 +14,7 @@ export default class VersionCommand implements CommandInterface {
 
   public async execute(): Promise<void> {
     try {
-      const version = this.readVersion();
+      const version = VersionCommand.readVersion();
       console.info(chalk.bgBlue.white(` Версия проекта: ${version} `));
     } catch (error: unknown) {
       console.error(chalk.red(`Не удалось прочитать версию: ${error instanceof Error ? error.message : error}`));
