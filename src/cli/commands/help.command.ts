@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { CommandInterface } from './command.interface';
+import { CommandInterface } from './command.interface.js';
 
 export default class HelpCommand implements CommandInterface {
   public readonly name = '--help';
@@ -13,6 +13,7 @@ export default class HelpCommand implements CommandInterface {
             ${chalk.green('--version:')}
             ${chalk.green('--help:')}
             ${chalk.green('--import <path>:')}
+            ${chalk.green('--generate <n> <path> <url>:')}
     `);
   }
 }

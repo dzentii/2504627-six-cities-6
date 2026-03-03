@@ -17,9 +17,9 @@ export default class CLIApplication {
     return this.commands[commandName] ?? this.commands[this.defaultCommand];
   }
 
-  public processCommand(argv: string[]): void {
+  public async processCommand(argv: string[]): Promise<void> {
     const [,, commandName, ...parameters] = argv;
     const command = this.getCommand(commandName);
-    command.execute(...parameters);
+    await command.execute(...parameters);
   }
 }
