@@ -16,7 +16,7 @@
     "compile": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "ts": "ts-node",
-    "cli": "node --loader ts-node/esm ./src/main.cli.ts",
+    "cli": "npm run build && node ./dist/main.cli.js",
     "mock:server": "json-server --watch ./mocks/mock-server-data.json --port 3123"
   },
   "devDependencies": {
@@ -44,6 +44,7 @@
     "convict-format-with-validator": "^6.2.0",
     "dotenv": "^17.3.1",
     "inversify": "^7.11.0",
+    "mongoose": "^8.23.0",
     "pino": "^8.21.0",
     "reflect-metadata": "^0.2.2"
   }

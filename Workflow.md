@@ -66,6 +66,20 @@ npm run mock:server
 
 Команда запускает тестовый REST API c данными из `mocks/mock-server-data.json` на порту `3123`.
 
+#### Запустить CLI
+
+```bash
+npm run cli -- --<command> [--arguments]
+```
+
+Запускает CLI-интерфейс проекта. Примеры:
+
+```bash
+npm run cli -- --help
+npm run cli -- --generate 20 ./mocks/offers.tsv file:///home/user/mock-server-data.json
+npm run cli -- --import ./mocks/offers.tsv mongodb://admin:test@127.0.0.1:27017/six-cities?authSource=admin
+```
+
 #### Запустить приложение с красивым форматом логов
 
 ```bash
@@ -81,6 +95,22 @@ npm start
 ```
 
 В процессе запуска проекта будет выполнен процесс «Сборки проекта» и запуска результирующего кода.
+
+## Переменные окружения
+
+Список переменных окружения для запуска проекта:
+
+`PORT=3000` — порт запуска приложения.
+`DB_HOST=127.0.0.1` — хост MongoDB.
+`DB_PORT=27017` — порт MongoDB.
+`DB_NAME=six-cities` — имя базы данных.
+`DB_USER=admin` — пользователь MongoDB.
+`DB_PASSWORD=test` — пароль пользователя MongoDB.
+`SALT=random_salt_value` — соль для хеширования паролей.
+`MONGO_INITDB_ROOT_USERNAME=admin` — root-пользователь MongoDB для Docker-контейнера.
+`MONGO_INITDB_ROOT_PASSWORD=test` — root-пароль MongoDB для Docker-контейнера.
+`MONGO_EXPRESS_USERNAME=admin` — логин для входа в mongo-express.
+`MONGO_EXPRESS_PASSWORD=test` — пароль для входа в mongo-express.
 
 ## Структура проекта
 

@@ -19,7 +19,7 @@ export default class TSVFileReader extends EventEmitter {
     super();
   }
 
-  public async read(): Promise<void> {
+  public async read(lineHandler?: (offer: Offer) => Promise<void> | void): Promise<number> {
     const fileStream = createReadStream(this.filename, { encoding: 'utf-8' });
     const lineReader = createInterface({
       input: fileStream,
@@ -34,11 +34,17 @@ export default class TSVFileReader extends EventEmitter {
       }
 
       const offer = TSVFileReader.parseLine(line);
+
+      if (lineHandler) {
+        await lineHandler(offer);
+      }
+
       this.emit('line', offer);
       linesCount++;
     }
 
     this.emit('end', linesCount);
+    return linesCount;
   }
 
   private static parseLine(line: string): Offer {
