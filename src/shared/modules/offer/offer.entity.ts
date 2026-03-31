@@ -18,7 +18,6 @@ export type OfferEntity = {
   previewImage: string;
   images: string[];
   isPremium: boolean;
-  isFavorite: boolean;
   rating: number;
   type: HousingType;
   bedrooms: number;
@@ -59,10 +58,6 @@ const offerSchema = new Schema<OfferEntity>({
     required: true
   },
   isPremium: {
-    type: Boolean,
-    required: true
-  },
-  isFavorite: {
     type: Boolean,
     required: true
   },

@@ -1,4 +1,5 @@
 import { CityName, HousingType, Location } from '../../../types/offer.type.js';
+import { OfferEntity } from './offer.entity.js';
 import { OfferDocument } from './offer.entity.js';
 
 export type CreateOfferDto = {
@@ -9,7 +10,6 @@ export type CreateOfferDto = {
   previewImage: string;
   images: string[];
   isPremium: boolean;
-  isFavorite: boolean;
   rating: number;
   type: HousingType;
   bedrooms: number;
@@ -21,7 +21,19 @@ export type CreateOfferDto = {
   commentsCount?: number;
 };
 
+export type UpdateOfferDto = Partial<Omit<CreateOfferDto, 'authorId'>>;
+export type OfferView = OfferEntity & {
+  id: string;
+  isFavorite: boolean;
+};
+
 export interface OfferServiceInterface {
-  findById(id: string): Promise<OfferDocument | null>;
+  findById(id: string, userId?: string): Promise<OfferView | null>;
+  find(limit?: number, userId?: string): Promise<OfferView[]>;
+  findPremiumByCity(city: CityName, limit?: number, userId?: string): Promise<OfferView[]>;
+  findFavorites(userId: string, limit?: number): Promise<OfferView[]>;
   create(data: CreateOfferDto): Promise<OfferDocument>;
+  updateById(id: string, data: UpdateOfferDto): Promise<OfferDocument | null>;
+  deleteById(id: string): Promise<OfferDocument | null>;
+  setFavoriteStatus(id: string, userId: string, isFavorite: boolean): Promise<OfferView | null>;
 }
