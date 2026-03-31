@@ -5,6 +5,10 @@ export enum Component {
   DatabaseClient = 'DatabaseClient',
   UserModel = 'UserModel',
   OfferModel = 'OfferModel',
+  CommentModel = 'CommentModel',
+  FavoriteModel = 'FavoriteModel',
   UserService = 'UserService',
   OfferService = 'OfferService',
+  CommentService = 'CommentService',
+  FavoriteService = 'FavoriteService',
 }
