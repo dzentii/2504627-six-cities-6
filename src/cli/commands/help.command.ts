@@ -12,7 +12,7 @@ export default class HelpCommand implements CommandInterface {
         ${chalk.yellow('Команды:')}
             ${chalk.green('--version:')}
             ${chalk.green('--help:')}
-            ${chalk.green('--import <path>:')}
+            ${chalk.green('--import <path> <db-uri>:')}
             ${chalk.green('--generate <n> <path> <url>:')}
     `);
   }
