@@ -8,6 +8,8 @@ import HttpError from '../../libs/rest/http-error.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
+import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
+import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
 import { UserDocument } from '../user/user.entity.js';
 import { UserServiceInterface } from '../user/user-service.interface.js';
 import CreateOfferRequest from './dto/create-offer.request.js';
@@ -17,11 +19,14 @@ import OfferDetailResponse from './rdo/offer-detail.response.js';
 import OfferPreviewResponse from './rdo/offer-preview.response.js';
 
 const OFFER_NOT_FOUND_MESSAGE = 'Offer not found.';
-const OFFER_ACCESS_DENIED_MESSAGE = 'You cannot modify this offer.';
 const OFFER_AUTHOR_NOT_FOUND_MESSAGE = 'Offer author not found.';
 
 @injectable()
 export default class OfferController extends AbstractController {
+  private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
+  private readonly createOfferValidationMiddleware: ValidateDtoMiddleware<CreateOfferRequest>;
+  private readonly updateOfferValidationMiddleware: ValidateDtoMiddleware<UpdateOfferRequest>;
+
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.OfferService) private readonly offerService: OfferServiceInterface,
@@ -29,44 +34,52 @@ export default class OfferController extends AbstractController {
   ) {
     super(logger);
 
+    this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
+    this.createOfferValidationMiddleware = new ValidateDtoMiddleware(CreateOfferRequest);
+    this.updateOfferValidationMiddleware = new ValidateDtoMiddleware(UpdateOfferRequest);
+
     this.addRoute({
       path: '/',
       method: HttpMethod.Get,
-      handler: this.getOffers
+      handler: this.index
     });
 
     this.addRoute({
       path: '/',
       method: HttpMethod.Post,
-      handler: this.createOffer
+      handler: this.create,
+      middlewares: [this.createOfferValidationMiddleware]
     });
 
     this.addRoute({
       path: '/premium/:city',
       method: HttpMethod.Get,
-      handler: this.getPremiumOffers
+      handler: this.indexPremium
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Get,
-      handler: this.getOfferById
+      handler: this.show,
+      middlewares: [this.offerIdValidationMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Patch,
-      handler: this.updateOffer
+      handler: this.update,
+      middlewares: [this.offerIdValidationMiddleware, this.updateOfferValidationMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Delete,
-      handler: this.deleteOffer
+      handler: this.delete,
+      middlewares: [this.offerIdValidationMiddleware]
     });
   }
 
-  private async getOffers(request: Request, response: Response): Promise<void> {
+  private async index(request: Request, response: Response): Promise<void> {
     const limit = OfferController.parseLimit(request.query.limit);
     const userId = this.getUserId(request);
     const offers = await this.offerService.find(limit, userId);
@@ -74,32 +87,31 @@ export default class OfferController extends AbstractController {
     this.ok(response, fillDtos(OfferPreviewResponse, offers));
   }
 
-  private async createOffer(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
-    const requestData = fillDto(CreateOfferRequest, request.body);
-    const createData = OfferController.buildCreateOfferData(requestData, userId);
+  private async create(request: Request, response: Response): Promise<void> {
+    const requestData = request.body as CreateOfferRequest;
+    const createData = OfferController.buildCreateOfferData(requestData);
+    const author = await this.userService.findById(requestData.authorId);
+
+    if (!author) {
+      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_AUTHOR_NOT_FOUND_MESSAGE);
+    }
 
     const createdOffer = await this.offerService.create(createData);
     if (requestData.isFavorite) {
-      await this.offerService.setFavoriteStatus(createdOffer.id, userId, true);
+      await this.offerService.setFavoriteStatus(createdOffer.id, requestData.authorId, true);
     }
 
-    const offer = await this.offerService.findById(createdOffer.id, userId);
+    const offer = await this.offerService.findById(createdOffer.id, requestData.authorId);
 
     if (!offer) {
       throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
-    }
-
-    const author = await this.userService.findById(userId);
-    if (!author) {
-      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_AUTHOR_NOT_FOUND_MESSAGE);
     }
 
     const responseData = fillDto(OfferDetailResponse, OfferController.prepareOfferDetailData(offer, author));
     this.created(response, responseData);
   }
 
-  private async getOfferById(request: Request, response: Response): Promise<void> {
+  private async show(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
     const userId = this.getUserId(request);
 
@@ -114,20 +126,16 @@ export default class OfferController extends AbstractController {
     this.ok(response, responseData);
   }
 
-  private async updateOffer(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
+  private async update(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
+    const userId = this.getUserId(request);
 
     const existingOffer = await this.offerService.findById(offerId, userId);
     if (!existingOffer) {
       throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
     }
 
-    if (OfferController.extractOfferAuthorId(existingOffer) !== userId) {
-      throw new HttpError(StatusCodes.FORBIDDEN, OFFER_ACCESS_DENIED_MESSAGE);
-    }
-
-    const requestData = fillDto(UpdateOfferRequest, request.body);
+    const requestData = request.body as UpdateOfferRequest;
     const updateData = OfferController.buildUpdateOfferData(requestData);
 
     const updatedOffer = await this.offerService.updateById(offerId, updateData);
@@ -136,7 +144,8 @@ export default class OfferController extends AbstractController {
     }
 
     if (typeof requestData.isFavorite !== 'undefined') {
-      await this.offerService.setFavoriteStatus(offerId, userId, requestData.isFavorite);
+      const favoriteUserId = userId ?? OfferController.extractOfferAuthorId(existingOffer);
+      await this.offerService.setFavoriteStatus(offerId, favoriteUserId, requestData.isFavorite);
     }
 
     const offer = await this.offerService.findById(offerId, userId);
@@ -150,24 +159,19 @@ export default class OfferController extends AbstractController {
     this.ok(response, responseData);
   }
 
-  private async deleteOffer(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
+  private async delete(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
 
-    const offer = await this.offerService.findById(offerId, userId);
+    const offer = await this.offerService.findById(offerId);
     if (!offer) {
       throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
-    }
-
-    if (OfferController.extractOfferAuthorId(offer) !== userId) {
-      throw new HttpError(StatusCodes.FORBIDDEN, OFFER_ACCESS_DENIED_MESSAGE);
     }
 
     await this.offerService.deleteById(offerId);
     this.noContent(response);
   }
 
-  private async getPremiumOffers(request: Request, response: Response): Promise<void> {
+  private async indexPremium(request: Request, response: Response): Promise<void> {
     const city = this.getRouteParameter(request, 'city') as CityName;
     const userId = this.getUserId(request);
     const offers = await this.offerService.findPremiumByCity(city, undefined, userId);
@@ -195,7 +199,7 @@ export default class OfferController extends AbstractController {
     return Number.isNaN(parsedLimit) ? undefined : parsedLimit;
   }
 
-  private static buildCreateOfferData(requestData: CreateOfferRequest, authorId: string): CreateOfferDto {
+  private static buildCreateOfferData(requestData: CreateOfferRequest): CreateOfferDto {
     return {
       title: requestData.title,
       description: requestData.description,
@@ -211,7 +215,7 @@ export default class OfferController extends AbstractController {
       price: requestData.price,
       goods: requestData.goods,
       location: requestData.location,
-      authorId
+      authorId: requestData.authorId
     };
   }
 

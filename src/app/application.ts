@@ -4,6 +4,7 @@ import { ConfigInterface } from '../shared/libs/config/config.interface.js';
 import { DatabaseClientInterface } from '../shared/libs/database-client/database-client.interface.js';
 import { LoggerInterface } from '../shared/libs/logger/logger.interface.js';
 import { ExceptionFilterInterface } from '../shared/libs/rest/exception-filter.interface.js';
+import CommentController from '../shared/modules/comment/comment.controller.js';
 import FavoriteController from '../shared/modules/favorite/favorite.controller.js';
 import OfferController from '../shared/modules/offer/offer.controller.js';
 import UserController from '../shared/modules/user/user.controller.js';
@@ -23,6 +24,7 @@ export default class Application {
     @inject(Component.UserController) private readonly userController: UserController,
     @inject(Component.OfferController) private readonly offerController: OfferController,
     @inject(Component.FavoriteController) private readonly favoriteController: FavoriteController,
+    @inject(Component.CommentController) private readonly commentController: CommentController,
     @inject(Component.ExceptionFilter) private readonly exceptionFilter: ExceptionFilterInterface
   ) {
     this.expressApplication = express();
@@ -48,8 +50,9 @@ export default class Application {
 
   private registerRoutes(): void {
     this.expressApplication.use(USERS_ROUTE_PREFIX, this.userController.getRouter());
-    this.expressApplication.use(OFFERS_ROUTE_PREFIX, this.offerController.getRouter());
     this.expressApplication.use(OFFERS_ROUTE_PREFIX, this.favoriteController.getRouter());
+    this.expressApplication.use(OFFERS_ROUTE_PREFIX, this.commentController.getRouter());
+    this.expressApplication.use(OFFERS_ROUTE_PREFIX, this.offerController.getRouter());
     this.logger.info('Routes have been registered.');
   }
 
