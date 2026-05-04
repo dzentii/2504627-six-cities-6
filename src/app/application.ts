@@ -1,5 +1,6 @@
 import { inject, injectable } from 'inversify';
 import express, { Express } from 'express';
+import { resolve } from 'node:path';
 import { ConfigInterface } from '../shared/libs/config/config.interface.js';
 import { DatabaseClientInterface } from '../shared/libs/database-client/database-client.interface.js';
 import { LoggerInterface } from '../shared/libs/logger/logger.interface.js';
@@ -12,6 +13,7 @@ import { Component } from '../shared/types/component.enum.js';
 
 const USERS_ROUTE_PREFIX = '/users';
 const OFFERS_ROUTE_PREFIX = '/offers';
+const UPLOADS_ROUTE_PREFIX = '/upload';
 
 @injectable()
 export default class Application {
@@ -45,7 +47,13 @@ export default class Application {
 
   private registerMiddleware(): void {
     this.expressApplication.use(express.json());
+    this.expressApplication.use(
+      UPLOADS_ROUTE_PREFIX,
+      express.static(resolve(this.config.getUploadDirectoryPath()))
+    );
+
     this.logger.info('Middleware registered: express.json');
+    this.logger.info(`Static middleware registered: ${UPLOADS_ROUTE_PREFIX}`);
   }
 
   private registerRoutes(): void {

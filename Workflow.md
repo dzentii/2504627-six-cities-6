@@ -107,6 +107,7 @@ npm start
 `DB_USER=admin` — пользователь MongoDB.
 `DB_PASSWORD=test` — пароль пользователя MongoDB.
 `SALT=random_salt_value` — соль для хеширования паролей.
+`UPLOAD_DIRECTORY_PATH=uploads` — директория для хранения загружаемых файлов (аватары).
 `MONGO_INITDB_ROOT_USERNAME=admin` — root-пользователь MongoDB для Docker-контейнера.
 `MONGO_INITDB_ROOT_PASSWORD=test` — root-пароль MongoDB для Docker-контейнера.
 `MONGO_EXPRESS_USERNAME=admin` — логин для входа в mongo-express.

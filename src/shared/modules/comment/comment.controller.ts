@@ -3,13 +3,14 @@ import { inject, injectable } from 'inversify';
 import { StatusCodes } from 'http-status-codes';
 import { Component } from '../../types/component.enum.js';
 import AbstractController from '../../libs/rest/abstract.controller.js';
+import DocumentExistsMiddleware from '../../libs/rest/document-exists.middleware.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
 import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
-import { OfferServiceInterface } from '../offer/offer-service.interface.js';
+import { OfferServiceInterface, OfferView } from '../offer/offer-service.interface.js';
 import { UserDocument } from '../user/user.entity.js';
 import { UserServiceInterface } from '../user/user-service.interface.js';
 import { CommentDocument } from './comment.entity.js';
@@ -23,6 +24,7 @@ const COMMENT_AUTHOR_NOT_FOUND_MESSAGE = 'Comment author not found.';
 @injectable()
 export default class CommentController extends AbstractController {
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
+  private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
   private readonly createCommentValidationMiddleware: ValidateDtoMiddleware<CreateCommentRequest>;
 
   constructor(
@@ -34,27 +36,26 @@ export default class CommentController extends AbstractController {
     super(logger);
 
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
+    this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
     this.createCommentValidationMiddleware = new ValidateDtoMiddleware(CreateCommentRequest);
 
     this.addRoute({
       path: '/:offerId/comments',
       method: HttpMethod.Get,
       handler: this.index,
-      middlewares: [this.offerIdValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId/comments',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [this.offerIdValidationMiddleware, this.createCommentValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.createCommentValidationMiddleware, this.offerExistsMiddleware]
     });
   }
 
   private async index(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
-    await this.ensureOfferExists(offerId);
-
     const comments = await this.commentService.findByOfferId(offerId);
     const responseData = await this.mapCommentsWithAuthors(comments);
 
@@ -63,8 +64,6 @@ export default class CommentController extends AbstractController {
 
   private async create(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
-    await this.ensureOfferExists(offerId);
-
     const requestData = request.body as CreateCommentRequest;
     const author = await this.userService.findById(requestData.authorId);
 
@@ -81,14 +80,6 @@ export default class CommentController extends AbstractController {
 
     const responseData = CommentController.prepareCommentData(createdComment, author);
     this.created(response, fillDto(CommentResponse, responseData));
-  }
-
-  private async ensureOfferExists(offerId: string): Promise<void> {
-    const offer = await this.offerService.findById(offerId);
-
-    if (!offer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
-    }
   }
 
   private async mapCommentsWithAuthors(comments: CommentDocument[]): Promise<Record<string, unknown>[]> {
