@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, RequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import asyncHandler from 'express-async-handler';
 import { LoggerInterface } from '../logger/logger.interface.js';
 import { ControllerInterface } from './controller.interface.js';
+import { MiddlewareInterface } from './middleware.interface.js';
 import { RouteInterface } from './route.interface.js';
 import HttpError from './http-error.js';
 
@@ -28,7 +29,7 @@ export default abstract class AbstractController implements ControllerInterface 
 
   protected addRoute(route: RouteInterface): void {
     const routeHandler = asyncHandler(route.handler.bind(this));
-    const middlewares = route.middlewares ?? [];
+    const middlewares = (route.middlewares ?? []).map((middleware) => this.transformMiddleware(middleware));
 
     this.router[route.method](route.path, ...middlewares, routeHandler);
     this.logger.info(`Route registered: [${route.method.toUpperCase()}] ${route.path}`);
@@ -89,5 +90,9 @@ export default abstract class AbstractController implements ControllerInterface 
     }
 
     return parameterValue ?? EMPTY_STRING;
+  }
+
+  private transformMiddleware(middleware: MiddlewareInterface): RequestHandler {
+    return asyncHandler(middleware.execute.bind(middleware));
   }
 }

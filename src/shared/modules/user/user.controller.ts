@@ -7,6 +7,7 @@ import HttpError from '../../libs/rest/http-error.js';
 import { fillDto } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
+import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
 import { UserDocument } from './user.entity.js';
 import { UserServiceInterface } from './user-service.interface.js';
 import CreateUserRequest from './dto/create-user.request.js';
@@ -20,22 +21,30 @@ const USER_NOT_FOUND_MESSAGE = 'User not found.';
 
 @injectable()
 export default class UserController extends AbstractController {
+  private readonly createUserValidationMiddleware: ValidateDtoMiddleware<CreateUserRequest>;
+  private readonly loginValidationMiddleware: ValidateDtoMiddleware<LoginUserRequest>;
+
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.UserService) private readonly userService: UserServiceInterface
   ) {
     super(logger);
 
+    this.createUserValidationMiddleware = new ValidateDtoMiddleware(CreateUserRequest);
+    this.loginValidationMiddleware = new ValidateDtoMiddleware(LoginUserRequest);
+
     this.addRoute({
       path: '/register',
       method: HttpMethod.Post,
-      handler: this.register
+      handler: this.create,
+      middlewares: [this.createUserValidationMiddleware]
     });
 
     this.addRoute({
       path: '/login',
       method: HttpMethod.Post,
-      handler: this.login
+      handler: this.login,
+      middlewares: [this.loginValidationMiddleware]
     });
 
     this.addRoute({
@@ -47,12 +56,12 @@ export default class UserController extends AbstractController {
     this.addRoute({
       path: '/check-auth',
       method: HttpMethod.Get,
-      handler: this.checkAuth
+      handler: this.show
     });
   }
 
-  private async register(request: Request, response: Response): Promise<void> {
-    const requestData = fillDto(CreateUserRequest, request.body);
+  private async create(request: Request, response: Response): Promise<void> {
+    const requestData = request.body as CreateUserRequest;
 
     const existingUser = await this.userService.findByEmail(requestData.email);
     if (existingUser) {
@@ -66,7 +75,7 @@ export default class UserController extends AbstractController {
   }
 
   private async login(request: Request, response: Response): Promise<void> {
-    const requestData = fillDto(LoginUserRequest, request.body);
+    const requestData = request.body as LoginUserRequest;
 
     const user = await this.userService.findByEmail(requestData.email);
     if (!user || user.password !== requestData.password) {
@@ -86,7 +95,7 @@ export default class UserController extends AbstractController {
     this.noContent(response);
   }
 
-  private async checkAuth(request: Request, response: Response): Promise<void> {
+  private async show(request: Request, response: Response): Promise<void> {
     const userId = this.ensureAuthenticated(request);
     const user = await this.userService.findById(userId);
 

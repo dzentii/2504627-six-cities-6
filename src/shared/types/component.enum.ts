@@ -7,6 +7,7 @@ export enum Component {
   UserController = 'UserController',
   OfferController = 'OfferController',
   FavoriteController = 'FavoriteController',
+  CommentController = 'CommentController',
   UserModel = 'UserModel',
   OfferModel = 'OfferModel',
   CommentModel = 'CommentModel',

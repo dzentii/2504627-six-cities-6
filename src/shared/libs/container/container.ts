@@ -10,6 +10,7 @@ import { LoggerInterface } from '../logger/logger.interface.js';
 import LoggerService from '../logger/logger.service.js';
 import DefaultExceptionFilter from '../rest/default-exception-filter.js';
 import { ExceptionFilterInterface } from '../rest/exception-filter.interface.js';
+import CommentController from '../../modules/comment/comment.controller.js';
 import { CommentEntity, CommentModel } from '../../modules/comment/comment.entity.js';
 import { CommentServiceInterface } from '../../modules/comment/comment-service.interface.js';
 import DefaultCommentService from '../../modules/comment/default-comment.service.js';
@@ -38,6 +39,7 @@ export function createApplicationContainer(): Container {
   container.bind<UserController>(Component.UserController).to(UserController).inSingletonScope();
   container.bind<OfferController>(Component.OfferController).to(OfferController).inSingletonScope();
   container.bind<FavoriteController>(Component.FavoriteController).to(FavoriteController).inSingletonScope();
+  container.bind<CommentController>(Component.CommentController).to(CommentController).inSingletonScope();
   container.bind<Model<UserEntity>>(Component.UserModel).toConstantValue(UserModel);
   container.bind<Model<OfferEntity>>(Component.OfferModel).toConstantValue(OfferModel);
   container.bind<Model<CommentEntity>>(Component.CommentModel).toConstantValue(CommentModel);

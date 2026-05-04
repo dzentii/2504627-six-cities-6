@@ -7,48 +7,60 @@ import HttpError from '../../libs/rest/http-error.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
-import { OfferServiceInterface } from '../offer/offer-service.interface.js';
+import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
+import { OfferView, OfferServiceInterface } from '../offer/offer-service.interface.js';
 import OfferPreviewResponse from '../offer/rdo/offer-preview.response.js';
 
 const OFFER_NOT_FOUND_MESSAGE = 'Offer not found.';
 
 @injectable()
 export default class FavoriteController extends AbstractController {
+  private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
+
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.OfferService) private readonly offerService: OfferServiceInterface
   ) {
     super(logger);
 
+    this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
+
     this.addRoute({
       path: '/favorites',
       method: HttpMethod.Get,
-      handler: this.getFavorites
+      handler: this.index
     });
 
     this.addRoute({
       path: '/:offerId/favorite',
       method: HttpMethod.Post,
-      handler: this.addToFavorites
+      handler: this.create,
+      middlewares: [this.offerIdValidationMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId/favorite',
       method: HttpMethod.Delete,
-      handler: this.removeFromFavorites
+      handler: this.delete,
+      middlewares: [this.offerIdValidationMiddleware]
     });
   }
 
-  private async getFavorites(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
-    const offers = await this.offerService.findFavorites(userId);
+  private async index(request: Request, response: Response): Promise<void> {
+    const userId = this.getUserId(request);
 
+    if (!userId) {
+      this.ok(response, []);
+      return;
+    }
+
+    const offers = await this.offerService.findFavorites(userId);
     this.ok(response, fillDtos(OfferPreviewResponse, offers));
   }
 
-  private async addToFavorites(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
+  private async create(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
+    const userId = await this.resolveUserId(request, offerId);
 
     const offer = await this.offerService.setFavoriteStatus(offerId, userId, true);
     if (!offer) {
@@ -58,9 +70,9 @@ export default class FavoriteController extends AbstractController {
     this.ok(response, fillDto(OfferPreviewResponse, offer));
   }
 
-  private async removeFromFavorites(request: Request, response: Response): Promise<void> {
-    const userId = this.ensureAuthenticated(request);
+  private async delete(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
+    const userId = await this.resolveUserId(request, offerId);
 
     const offer = await this.offerService.setFavoriteStatus(offerId, userId, false);
     if (!offer) {
@@ -68,5 +80,23 @@ export default class FavoriteController extends AbstractController {
     }
 
     this.ok(response, fillDto(OfferPreviewResponse, offer));
+  }
+
+  private async resolveUserId(request: Request, offerId: string): Promise<string> {
+    const requestUserId = this.getUserId(request);
+    if (requestUserId) {
+      return requestUserId;
+    }
+
+    const offer = await this.offerService.findById(offerId);
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
+    }
+
+    return FavoriteController.extractOfferAuthorId(offer);
+  }
+
+  private static extractOfferAuthorId(offer: OfferView): string {
+    return offer.author.toString();
   }
 }
