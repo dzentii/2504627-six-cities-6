@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { StatusCodes } from 'http-status-codes';
 import { Component } from '../../types/component.enum.js';
 import AbstractController from '../../libs/rest/abstract.controller.js';
+import DocumentExistsMiddleware from '../../libs/rest/document-exists.middleware.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
@@ -16,6 +17,7 @@ const OFFER_NOT_FOUND_MESSAGE = 'Offer not found.';
 @injectable()
 export default class FavoriteController extends AbstractController {
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
+  private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
 
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
@@ -24,6 +26,7 @@ export default class FavoriteController extends AbstractController {
     super(logger);
 
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
+    this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
 
     this.addRoute({
       path: '/favorites',
@@ -35,14 +38,14 @@ export default class FavoriteController extends AbstractController {
       path: '/:offerId/favorite',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [this.offerIdValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId/favorite',
       method: HttpMethod.Delete,
       handler: this.delete,
-      middlewares: [this.offerIdValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
   }
 

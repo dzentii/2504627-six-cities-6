@@ -13,4 +13,5 @@ export interface UserServiceInterface {
   findById(id: string): Promise<UserDocument | null>;
   findByEmail(email: string): Promise<UserDocument | null>;
   create(data: CreateUserDto): Promise<UserDocument>;
+  updateAvatarById(id: string, avatarPath: string): Promise<UserDocument | null>;
 }

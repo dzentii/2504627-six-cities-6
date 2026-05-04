@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { CityName } from '../../../types/offer.type.js';
 import { Component } from '../../types/component.enum.js';
 import AbstractController from '../../libs/rest/abstract.controller.js';
+import DocumentExistsMiddleware from '../../libs/rest/document-exists.middleware.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
@@ -24,6 +25,7 @@ const OFFER_AUTHOR_NOT_FOUND_MESSAGE = 'Offer author not found.';
 @injectable()
 export default class OfferController extends AbstractController {
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
+  private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
   private readonly createOfferValidationMiddleware: ValidateDtoMiddleware<CreateOfferRequest>;
   private readonly updateOfferValidationMiddleware: ValidateDtoMiddleware<UpdateOfferRequest>;
 
@@ -35,6 +37,7 @@ export default class OfferController extends AbstractController {
     super(logger);
 
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
+    this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
     this.createOfferValidationMiddleware = new ValidateDtoMiddleware(CreateOfferRequest);
     this.updateOfferValidationMiddleware = new ValidateDtoMiddleware(UpdateOfferRequest);
 
@@ -61,21 +64,21 @@ export default class OfferController extends AbstractController {
       path: '/:offerId',
       method: HttpMethod.Get,
       handler: this.show,
-      middlewares: [this.offerIdValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Patch,
       handler: this.update,
-      middlewares: [this.offerIdValidationMiddleware, this.updateOfferValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.updateOfferValidationMiddleware, this.offerExistsMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Delete,
       handler: this.delete,
-      middlewares: [this.offerIdValidationMiddleware]
+      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
   }
 
@@ -130,11 +133,6 @@ export default class OfferController extends AbstractController {
     const offerId = this.getRouteParameter(request, 'offerId');
     const userId = this.getUserId(request);
 
-    const existingOffer = await this.offerService.findById(offerId, userId);
-    if (!existingOffer) {
-      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
-    }
-
     const requestData = request.body as UpdateOfferRequest;
     const updateData = OfferController.buildUpdateOfferData(requestData);
 
@@ -144,7 +142,7 @@ export default class OfferController extends AbstractController {
     }
 
     if (typeof requestData.isFavorite !== 'undefined') {
-      const favoriteUserId = userId ?? OfferController.extractOfferAuthorId(existingOffer);
+      const favoriteUserId = userId ?? updatedOffer.author.toString();
       await this.offerService.setFavoriteStatus(offerId, favoriteUserId, requestData.isFavorite);
     }
 
@@ -162,12 +160,11 @@ export default class OfferController extends AbstractController {
   private async delete(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
 
-    const offer = await this.offerService.findById(offerId);
-    if (!offer) {
+    const deletedOffer = await this.offerService.deleteById(offerId);
+    if (!deletedOffer) {
       throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
     }
 
-    await this.offerService.deleteById(offerId);
     this.noContent(response);
   }
 

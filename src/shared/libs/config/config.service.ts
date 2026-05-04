@@ -11,6 +11,7 @@ const DATABASE_NAME_ENV_NAME = 'DB_NAME';
 const DATABASE_USER_ENV_NAME = 'DB_USER';
 const DATABASE_PASSWORD_ENV_NAME = 'DB_PASSWORD';
 const SALT_ENV_NAME = 'SALT';
+const UPLOAD_DIRECTORY_PATH_ENV_NAME = 'UPLOAD_DIRECTORY_PATH';
 const DEFAULT_PORT_VALUE = 0;
 const DEFAULT_DATABASE_PORT_VALUE = 0;
 const EMPTY_STRING = '';
@@ -60,6 +61,12 @@ const configSchema = {
     format: String,
     default: EMPTY_STRING,
     env: SALT_ENV_NAME
+  },
+  uploadDirectoryPath: {
+    doc: 'Directory path to store uploaded files',
+    format: String,
+    default: EMPTY_STRING,
+    env: UPLOAD_DIRECTORY_PATH_ENV_NAME
   }
 };
 
@@ -102,6 +109,10 @@ export default class ConfigService implements ConfigInterface {
     return this.config.get('salt');
   }
 
+  public getUploadDirectoryPath(): string {
+    return this.config.get('uploadDirectoryPath');
+  }
+
   public getMongoUri(): string {
     const dbUser = encodeURIComponent(this.getDbUser());
     const dbPassword = encodeURIComponent(this.getDbPassword());
@@ -121,6 +132,7 @@ export default class ConfigService implements ConfigInterface {
       DATABASE_USER_ENV_NAME,
       DATABASE_PASSWORD_ENV_NAME,
       SALT_ENV_NAME,
+      UPLOAD_DIRECTORY_PATH_ENV_NAME,
     ];
 
     for (const variableName of requiredEnvironmentVariables) {

@@ -21,4 +21,12 @@ export default class DefaultUserService implements UserServiceInterface {
   public create(data: CreateUserDto): Promise<UserDocument> {
     return this.userModel.create(data);
   }
+
+  public updateAvatarById(id: string, avatarPath: string): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(
+      id,
+      { avatarPath },
+      { new: true }
+    ).exec();
+  }
 }
