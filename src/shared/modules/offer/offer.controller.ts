@@ -10,7 +10,10 @@ import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
 import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
+import ParseTokenMiddleware from '../../libs/rest/parse-token.middleware.js';
+import PrivateRouteMiddleware from '../../libs/rest/private-route.middleware.js';
 import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
+import { TokenServiceInterface } from '../../libs/token/token-service.interface.js';
 import { UserDocument } from '../user/user.entity.js';
 import { UserServiceInterface } from '../user/user-service.interface.js';
 import CreateOfferRequest from './dto/create-offer.request.js';
@@ -21,9 +24,13 @@ import OfferPreviewResponse from './rdo/offer-preview.response.js';
 
 const OFFER_NOT_FOUND_MESSAGE = 'Offer not found.';
 const OFFER_AUTHOR_NOT_FOUND_MESSAGE = 'Offer author not found.';
+const FORBIDDEN_OFFER_EDITING_MESSAGE = 'Forbidden to modify offer of another user.';
+const USER_NOT_FOUND_MESSAGE = 'User not found.';
 
 @injectable()
 export default class OfferController extends AbstractController {
+  private readonly parseTokenMiddleware: ParseTokenMiddleware;
+  private readonly privateRouteMiddleware: PrivateRouteMiddleware;
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
   private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
   private readonly createOfferValidationMiddleware: ValidateDtoMiddleware<CreateOfferRequest>;
@@ -32,10 +39,13 @@ export default class OfferController extends AbstractController {
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.OfferService) private readonly offerService: OfferServiceInterface,
-    @inject(Component.UserService) private readonly userService: UserServiceInterface
+    @inject(Component.UserService) private readonly userService: UserServiceInterface,
+    @inject(Component.TokenService) private readonly tokenService: TokenServiceInterface
   ) {
     super(logger);
 
+    this.parseTokenMiddleware = new ParseTokenMiddleware(this.tokenService);
+    this.privateRouteMiddleware = new PrivateRouteMiddleware(this.tokenService);
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
     this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
     this.createOfferValidationMiddleware = new ValidateDtoMiddleware(CreateOfferRequest);
@@ -44,41 +54,48 @@ export default class OfferController extends AbstractController {
     this.addRoute({
       path: '/',
       method: HttpMethod.Get,
-      handler: this.index
+      handler: this.index,
+      middlewares: [this.parseTokenMiddleware]
     });
 
     this.addRoute({
       path: '/',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [this.createOfferValidationMiddleware]
+      middlewares: [this.privateRouteMiddleware, this.createOfferValidationMiddleware]
     });
 
     this.addRoute({
       path: '/premium/:city',
       method: HttpMethod.Get,
-      handler: this.indexPremium
+      handler: this.indexPremium,
+      middlewares: [this.parseTokenMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Get,
       handler: this.show,
-      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
+      middlewares: [this.parseTokenMiddleware, this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Patch,
       handler: this.update,
-      middlewares: [this.offerIdValidationMiddleware, this.updateOfferValidationMiddleware, this.offerExistsMiddleware]
+      middlewares: [
+        this.privateRouteMiddleware,
+        this.offerIdValidationMiddleware,
+        this.updateOfferValidationMiddleware,
+        this.offerExistsMiddleware
+      ]
     });
 
     this.addRoute({
       path: '/:offerId',
       method: HttpMethod.Delete,
       handler: this.delete,
-      middlewares: [this.offerIdValidationMiddleware, this.offerExistsMiddleware]
+      middlewares: [this.privateRouteMiddleware, this.offerIdValidationMiddleware, this.offerExistsMiddleware]
     });
   }
 
@@ -92,19 +109,20 @@ export default class OfferController extends AbstractController {
 
   private async create(request: Request, response: Response): Promise<void> {
     const requestData = request.body as CreateOfferRequest;
-    const createData = OfferController.buildCreateOfferData(requestData);
-    const author = await this.userService.findById(requestData.authorId);
+    const authorId = this.ensureAuthenticated(request);
+    const createData = OfferController.buildCreateOfferData(requestData, authorId);
+    const author = await this.userService.findById(authorId);
 
     if (!author) {
-      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_AUTHOR_NOT_FOUND_MESSAGE);
+      throw new HttpError(StatusCodes.UNAUTHORIZED, USER_NOT_FOUND_MESSAGE);
     }
 
     const createdOffer = await this.offerService.create(createData);
     if (requestData.isFavorite) {
-      await this.offerService.setFavoriteStatus(createdOffer.id, requestData.authorId, true);
+      await this.offerService.setFavoriteStatus(createdOffer.id, authorId, true);
     }
 
-    const offer = await this.offerService.findById(createdOffer.id, requestData.authorId);
+    const offer = await this.offerService.findById(createdOffer.id, authorId);
 
     if (!offer) {
       throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
@@ -131,7 +149,16 @@ export default class OfferController extends AbstractController {
 
   private async update(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
-    const userId = this.getUserId(request);
+    const userId = this.ensureAuthenticated(request);
+    const existingOffer = await this.offerService.findById(offerId, userId);
+
+    if (!existingOffer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
+    }
+
+    if (OfferController.extractOfferAuthorId(existingOffer) !== userId) {
+      throw new HttpError(StatusCodes.FORBIDDEN, FORBIDDEN_OFFER_EDITING_MESSAGE);
+    }
 
     const requestData = request.body as UpdateOfferRequest;
     const updateData = OfferController.buildUpdateOfferData(requestData);
@@ -142,8 +169,7 @@ export default class OfferController extends AbstractController {
     }
 
     if (typeof requestData.isFavorite !== 'undefined') {
-      const favoriteUserId = userId ?? updatedOffer.author.toString();
-      await this.offerService.setFavoriteStatus(offerId, favoriteUserId, requestData.isFavorite);
+      await this.offerService.setFavoriteStatus(offerId, userId, requestData.isFavorite);
     }
 
     const offer = await this.offerService.findById(offerId, userId);
@@ -159,6 +185,16 @@ export default class OfferController extends AbstractController {
 
   private async delete(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
+    const userId = this.ensureAuthenticated(request);
+    const offer = await this.offerService.findById(offerId, userId);
+
+    if (!offer) {
+      throw new HttpError(StatusCodes.NOT_FOUND, OFFER_NOT_FOUND_MESSAGE);
+    }
+
+    if (OfferController.extractOfferAuthorId(offer) !== userId) {
+      throw new HttpError(StatusCodes.FORBIDDEN, FORBIDDEN_OFFER_EDITING_MESSAGE);
+    }
 
     const deletedOffer = await this.offerService.deleteById(offerId);
     if (!deletedOffer) {
@@ -196,7 +232,7 @@ export default class OfferController extends AbstractController {
     return Number.isNaN(parsedLimit) ? undefined : parsedLimit;
   }
 
-  private static buildCreateOfferData(requestData: CreateOfferRequest): CreateOfferDto {
+  private static buildCreateOfferData(requestData: CreateOfferRequest, authorId: string): CreateOfferDto {
     return {
       title: requestData.title,
       description: requestData.description,
@@ -212,7 +248,7 @@ export default class OfferController extends AbstractController {
       price: requestData.price,
       goods: requestData.goods,
       location: requestData.location,
-      authorId: requestData.authorId
+      authorId
     };
   }
 

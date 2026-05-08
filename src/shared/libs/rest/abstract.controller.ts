@@ -7,10 +7,6 @@ import { MiddlewareInterface } from './middleware.interface.js';
 import { RouteInterface } from './route.interface.js';
 import HttpError from './http-error.js';
 
-const USER_ID_HEADER_NAME = 'x-user-id';
-const AUTHORIZATION_HEADER_NAME = 'authorization';
-const BEARER_TOKEN_PREFIX = 'Bearer ';
-const USER_TOKEN_PREFIX = 'token-';
 const USER_IS_NOT_AUTHORIZED_MESSAGE = 'User is not authorized.';
 const EMPTY_STRING = '';
 
@@ -57,19 +53,7 @@ export default abstract class AbstractController implements ControllerInterface 
   }
 
   protected getUserId(request: Request): string | undefined {
-    const authorizationHeader = request.header(AUTHORIZATION_HEADER_NAME);
-
-    if (authorizationHeader?.startsWith(BEARER_TOKEN_PREFIX)) {
-      const token = authorizationHeader.slice(BEARER_TOKEN_PREFIX.length).trim();
-
-      if (token.startsWith(USER_TOKEN_PREFIX)) {
-        const tokenUserId = token.slice(USER_TOKEN_PREFIX.length).trim();
-        return tokenUserId || undefined;
-      }
-    }
-
-    const userId = request.header(USER_ID_HEADER_NAME);
-    return userId?.trim() || undefined;
+    return request.tokenPayload?.userId;
   }
 
   protected ensureAuthenticated(request: Request): string {

@@ -4,16 +4,16 @@ import { StatusCodes } from 'http-status-codes';
 import { ConfigInterface } from '../../libs/config/config.interface.js';
 import { Component } from '../../types/component.enum.js';
 import AbstractController from '../../libs/rest/abstract.controller.js';
-import DocumentExistsMiddleware from '../../libs/rest/document-exists.middleware.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { fillDto } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
-import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
+import PrivateRouteMiddleware from '../../libs/rest/private-route.middleware.js';
 import UploadFileMiddleware from '../../libs/rest/upload-file.middleware.js';
 import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
 import { UserDocument } from './user.entity.js';
 import { UserServiceInterface } from './user-service.interface.js';
+import { TokenServiceInterface } from '../../libs/token/token-service.interface.js';
 import CreateUserRequest from './dto/create-user.request.js';
 import LoginUserRequest from './dto/login-user.request.js';
 import UserResponse from './rdo/user.response.js';
@@ -29,8 +29,7 @@ const AVATAR_FILE_REQUIRED_MESSAGE = 'Avatar file is required.';
 
 @injectable()
 export default class UserController extends AbstractController {
-  private readonly userIdValidationMiddleware: ObjectIdMiddleware;
-  private readonly userExistsMiddleware: DocumentExistsMiddleware<UserDocument>;
+  private readonly privateRouteMiddleware: PrivateRouteMiddleware;
   private readonly uploadAvatarMiddleware: UploadFileMiddleware;
   private readonly createUserValidationMiddleware: ValidateDtoMiddleware<CreateUserRequest>;
   private readonly loginValidationMiddleware: ValidateDtoMiddleware<LoginUserRequest>;
@@ -38,12 +37,12 @@ export default class UserController extends AbstractController {
   constructor(
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.UserService) private readonly userService: UserServiceInterface,
+    @inject(Component.TokenService) private readonly tokenService: TokenServiceInterface,
     @inject(Component.Config) private readonly config: ConfigInterface
   ) {
     super(logger);
 
-    this.userIdValidationMiddleware = new ObjectIdMiddleware('userId');
-    this.userExistsMiddleware = new DocumentExistsMiddleware(this.userService, 'userId', USER_NOT_FOUND_MESSAGE);
+    this.privateRouteMiddleware = new PrivateRouteMiddleware(this.tokenService);
     this.uploadAvatarMiddleware = new UploadFileMiddleware({
       fieldName: AVATAR_FILE_FIELD_NAME,
       uploadDirectoryPath: this.config.getUploadDirectoryPath()
@@ -68,20 +67,22 @@ export default class UserController extends AbstractController {
     this.addRoute({
       path: '/logout',
       method: HttpMethod.Post,
-      handler: this.logout
+      handler: this.logout,
+      middlewares: [this.privateRouteMiddleware]
     });
 
     this.addRoute({
       path: '/check-auth',
       method: HttpMethod.Get,
-      handler: this.show
+      handler: this.show,
+      middlewares: [this.privateRouteMiddleware]
     });
 
     this.addRoute({
-      path: '/:userId/avatar',
+      path: '/avatar',
       method: HttpMethod.Post,
       handler: this.uploadAvatar,
-      middlewares: [this.userIdValidationMiddleware, this.uploadAvatarMiddleware, this.userExistsMiddleware]
+      middlewares: [this.privateRouteMiddleware, this.uploadAvatarMiddleware]
     });
   }
 
@@ -107,8 +108,13 @@ export default class UserController extends AbstractController {
       throw new HttpError(StatusCodes.UNAUTHORIZED, INVALID_CREDENTIALS_MESSAGE);
     }
 
+    const token = await this.tokenService.createToken({
+      userId: user.id,
+      email: user.email
+    });
+
     const responseData = fillDto(LoginResponse, {
-      token: UserController.createToken(user.id),
+      token,
       user: UserController.prepareUserData(user)
     });
 
@@ -133,7 +139,7 @@ export default class UserController extends AbstractController {
   }
 
   private async uploadAvatar(request: Request, response: Response): Promise<void> {
-    const userId = this.getRouteParameter(request, 'userId');
+    const userId = this.ensureAuthenticated(request);
     const fileName = request.file?.filename;
 
     if (!fileName) {
@@ -155,9 +161,5 @@ export default class UserController extends AbstractController {
       ...user.toObject(),
       id: user.id
     };
-  }
-
-  private static createToken(userId: string): string {
-    return `token-${userId}`;
   }
 }

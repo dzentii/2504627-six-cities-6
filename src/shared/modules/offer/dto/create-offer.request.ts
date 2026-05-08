@@ -8,7 +8,6 @@ import {
   IsEnum,
   IsIn,
   IsInt,
-  IsMongoId,
   IsNumber,
   IsString,
   Length,
@@ -134,10 +133,6 @@ export default class CreateOfferRequest {
   @ArrayMinSize(GOODS_MIN_COUNT)
   @IsIn(OFFER_GOODS, { each: true })
   public goods!: string[];
-
-  @Expose()
-  @IsMongoId()
-  public authorId!: string;
 
   @Expose()
   @ValidateNested()

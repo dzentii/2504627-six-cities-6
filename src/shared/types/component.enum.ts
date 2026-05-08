@@ -16,4 +16,5 @@ export enum Component {
   OfferService = 'OfferService',
   CommentService = 'CommentService',
   FavoriteService = 'FavoriteService',
+  TokenService = 'TokenService',
 }

@@ -9,7 +9,9 @@ import HttpError from '../../libs/rest/http-error.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
 import ObjectIdMiddleware from '../../libs/rest/object-id.middleware.js';
+import PrivateRouteMiddleware from '../../libs/rest/private-route.middleware.js';
 import ValidateDtoMiddleware from '../../libs/rest/validate-dto.middleware.js';
+import { TokenServiceInterface } from '../../libs/token/token-service.interface.js';
 import { OfferServiceInterface, OfferView } from '../offer/offer-service.interface.js';
 import { UserDocument } from '../user/user.entity.js';
 import { UserServiceInterface } from '../user/user-service.interface.js';
@@ -23,6 +25,7 @@ const COMMENT_AUTHOR_NOT_FOUND_MESSAGE = 'Comment author not found.';
 
 @injectable()
 export default class CommentController extends AbstractController {
+  private readonly privateRouteMiddleware: PrivateRouteMiddleware;
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
   private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
   private readonly createCommentValidationMiddleware: ValidateDtoMiddleware<CreateCommentRequest>;
@@ -31,10 +34,12 @@ export default class CommentController extends AbstractController {
     @inject(Component.Logger) logger: LoggerInterface,
     @inject(Component.CommentService) private readonly commentService: CommentServiceInterface,
     @inject(Component.OfferService) private readonly offerService: OfferServiceInterface,
-    @inject(Component.UserService) private readonly userService: UserServiceInterface
+    @inject(Component.UserService) private readonly userService: UserServiceInterface,
+    @inject(Component.TokenService) private readonly tokenService: TokenServiceInterface
   ) {
     super(logger);
 
+    this.privateRouteMiddleware = new PrivateRouteMiddleware(this.tokenService);
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
     this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
     this.createCommentValidationMiddleware = new ValidateDtoMiddleware(CreateCommentRequest);
@@ -50,7 +55,12 @@ export default class CommentController extends AbstractController {
       path: '/:offerId/comments',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [this.offerIdValidationMiddleware, this.createCommentValidationMiddleware, this.offerExistsMiddleware]
+      middlewares: [
+        this.privateRouteMiddleware,
+        this.offerIdValidationMiddleware,
+        this.createCommentValidationMiddleware,
+        this.offerExistsMiddleware
+      ]
     });
   }
 
@@ -64,8 +74,9 @@ export default class CommentController extends AbstractController {
 
   private async create(request: Request, response: Response): Promise<void> {
     const offerId = this.getRouteParameter(request, 'offerId');
+    const authorId = this.ensureAuthenticated(request);
     const requestData = request.body as CreateCommentRequest;
-    const author = await this.userService.findById(requestData.authorId);
+    const author = await this.userService.findById(authorId);
 
     if (!author) {
       throw new HttpError(StatusCodes.NOT_FOUND, COMMENT_AUTHOR_NOT_FOUND_MESSAGE);
@@ -74,7 +85,7 @@ export default class CommentController extends AbstractController {
     const createdComment = await this.commentService.create({
       text: requestData.text,
       rating: requestData.rating,
-      authorId: requestData.authorId,
+      authorId,
       offerId
     });
 

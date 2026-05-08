@@ -10,6 +10,8 @@ import { LoggerInterface } from '../logger/logger.interface.js';
 import LoggerService from '../logger/logger.service.js';
 import DefaultExceptionFilter from '../rest/default-exception-filter.js';
 import { ExceptionFilterInterface } from '../rest/exception-filter.interface.js';
+import DefaultTokenService from '../token/default-token.service.js';
+import { TokenServiceInterface } from '../token/token-service.interface.js';
 import CommentController from '../../modules/comment/comment.controller.js';
 import { CommentEntity, CommentModel } from '../../modules/comment/comment.entity.js';
 import { CommentServiceInterface } from '../../modules/comment/comment-service.interface.js';
@@ -35,6 +37,7 @@ export function createApplicationContainer(): Container {
   container.bind<LoggerInterface>(Component.Logger).to(LoggerService).inSingletonScope();
   container.bind<ConfigInterface>(Component.Config).to(ConfigService).inSingletonScope();
   container.bind<DatabaseClientInterface>(Component.DatabaseClient).to(MongooseDatabaseClient).inSingletonScope();
+  container.bind<TokenServiceInterface>(Component.TokenService).to(DefaultTokenService).inSingletonScope();
   container.bind<ExceptionFilterInterface>(Component.ExceptionFilter).to(DefaultExceptionFilter).inSingletonScope();
   container.bind<UserController>(Component.UserController).to(UserController).inSingletonScope();
   container.bind<OfferController>(Component.OfferController).to(OfferController).inSingletonScope();
