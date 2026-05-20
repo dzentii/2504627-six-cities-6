@@ -7,6 +7,7 @@ import AbstractController from '../../libs/rest/abstract.controller.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { fillDto } from '../../libs/rest/fill-dto.js';
 import { LoggerInterface } from '../../libs/logger/logger.interface.js';
+import AnonymousRouteMiddleware from '../../libs/rest/anonymous-route.middleware.js';
 import { HttpMethod } from '../../libs/rest/http-method.enum.js';
 import PrivateRouteMiddleware from '../../libs/rest/private-route.middleware.js';
 import UploadFileMiddleware from '../../libs/rest/upload-file.middleware.js';
@@ -29,6 +30,7 @@ const AVATAR_FILE_REQUIRED_MESSAGE = 'Avatar file is required.';
 
 @injectable()
 export default class UserController extends AbstractController {
+  private readonly anonymousRouteMiddleware: AnonymousRouteMiddleware;
   private readonly privateRouteMiddleware: PrivateRouteMiddleware;
   private readonly uploadAvatarMiddleware: UploadFileMiddleware;
   private readonly createUserValidationMiddleware: ValidateDtoMiddleware<CreateUserRequest>;
@@ -42,6 +44,7 @@ export default class UserController extends AbstractController {
   ) {
     super(logger);
 
+    this.anonymousRouteMiddleware = new AnonymousRouteMiddleware(this.tokenService);
     this.privateRouteMiddleware = new PrivateRouteMiddleware(this.tokenService);
     this.uploadAvatarMiddleware = new UploadFileMiddleware({
       fieldName: AVATAR_FILE_FIELD_NAME,
@@ -54,7 +57,7 @@ export default class UserController extends AbstractController {
       path: '/register',
       method: HttpMethod.Post,
       handler: this.create,
-      middlewares: [this.createUserValidationMiddleware]
+      middlewares: [this.anonymousRouteMiddleware, this.createUserValidationMiddleware]
     });
 
     this.addRoute({
@@ -103,8 +106,8 @@ export default class UserController extends AbstractController {
   private async login(request: Request, response: Response): Promise<void> {
     const requestData = request.body as LoginUserRequest;
 
-    const user = await this.userService.findByEmail(requestData.email);
-    if (!user || user.password !== requestData.password) {
+    const user = await this.userService.verifyUser(requestData);
+    if (!user) {
       throw new HttpError(StatusCodes.UNAUTHORIZED, INVALID_CREDENTIALS_MESSAGE);
     }
 

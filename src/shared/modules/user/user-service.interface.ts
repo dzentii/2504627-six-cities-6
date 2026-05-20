@@ -9,9 +9,15 @@ export type CreateUserDto = {
   type: UserType;
 };
 
+export type VerifyUserDto = {
+  email: string;
+  password: string;
+};
+
 export interface UserServiceInterface {
   findById(id: string): Promise<UserDocument | null>;
   findByEmail(email: string): Promise<UserDocument | null>;
+  verifyUser(data: VerifyUserDto): Promise<UserDocument | null>;
   create(data: CreateUserDto): Promise<UserDocument>;
   updateAvatarById(id: string, avatarPath: string): Promise<UserDocument | null>;
 }
