@@ -24,10 +24,6 @@ export default class DefaultCommentService implements CommentServiceInterface {
     @inject(Component.OfferModel) private readonly offerModel: Model<OfferEntity>
   ) {}
 
-  public findById(id: string): Promise<CommentDocument | null> {
-    return this.commentModel.findById(id).exec();
-  }
-
   public findByOfferId(offerId: string, limit = DEFAULT_COMMENTS_LIMIT): Promise<CommentDocument[]> {
     return this.commentModel
       .find({ offer: offerId })

@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import { CityName } from '../../../types/offer.type.js';
 import { Component } from '../../types/component.enum.js';
 import AbstractController from '../../libs/rest/abstract.controller.js';
+import CityMiddleware from '../../libs/rest/city.middleware.js';
 import DocumentExistsMiddleware from '../../libs/rest/document-exists.middleware.js';
 import HttpError from '../../libs/rest/http-error.js';
 import { fillDto, fillDtos } from '../../libs/rest/fill-dto.js';
@@ -31,6 +32,7 @@ const USER_NOT_FOUND_MESSAGE = 'User not found.';
 export default class OfferController extends AbstractController {
   private readonly parseTokenMiddleware: ParseTokenMiddleware;
   private readonly privateRouteMiddleware: PrivateRouteMiddleware;
+  private readonly cityValidationMiddleware: CityMiddleware;
   private readonly offerIdValidationMiddleware: ObjectIdMiddleware;
   private readonly offerExistsMiddleware: DocumentExistsMiddleware<OfferView>;
   private readonly createOfferValidationMiddleware: ValidateDtoMiddleware<CreateOfferRequest>;
@@ -46,6 +48,7 @@ export default class OfferController extends AbstractController {
 
     this.parseTokenMiddleware = new ParseTokenMiddleware(this.tokenService);
     this.privateRouteMiddleware = new PrivateRouteMiddleware(this.tokenService);
+    this.cityValidationMiddleware = new CityMiddleware('city');
     this.offerIdValidationMiddleware = new ObjectIdMiddleware('offerId');
     this.offerExistsMiddleware = new DocumentExistsMiddleware(this.offerService, 'offerId', OFFER_NOT_FOUND_MESSAGE);
     this.createOfferValidationMiddleware = new ValidateDtoMiddleware(CreateOfferRequest);
@@ -69,7 +72,7 @@ export default class OfferController extends AbstractController {
       path: '/premium/:city',
       method: HttpMethod.Get,
       handler: this.indexPremium,
-      middlewares: [this.parseTokenMiddleware]
+      middlewares: [this.cityValidationMiddleware, this.parseTokenMiddleware]
     });
 
     this.addRoute({
@@ -229,7 +232,11 @@ export default class OfferController extends AbstractController {
     }
 
     const parsedLimit = Number.parseInt(limitValue, 10);
-    return Number.isNaN(parsedLimit) ? undefined : parsedLimit;
+    if (Number.isNaN(parsedLimit) || parsedLimit < 1) {
+      return undefined;
+    }
+
+    return parsedLimit;
   }
 
   private static buildCreateOfferData(requestData: CreateOfferRequest, authorId: string): CreateOfferDto {

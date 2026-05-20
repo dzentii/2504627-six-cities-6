@@ -41,11 +41,6 @@ export default class DefaultFavoriteService implements FavoriteServiceInterface 
     return deleteResult.deletedCount ?? ZERO_DELETED_COUNT;
   }
 
-  public async exists(userId: string, offerId: string): Promise<boolean> {
-    const favoriteDocument = await this.favoriteModel.findOne({ user: userId, offer: offerId }).exec();
-    return favoriteDocument !== null;
-  }
-
   public async removeByOfferId(offerId: string): Promise<number> {
     const deleteResult = await this.favoriteModel.deleteMany({ offer: offerId }).exec();
     return deleteResult.deletedCount ?? ZERO_DELETED_COUNT;
