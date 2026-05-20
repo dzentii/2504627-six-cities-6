@@ -1,5 +1,6 @@
 import { inject, injectable } from 'inversify';
 import express, { Express } from 'express';
+import cors from 'cors';
 import { resolve } from 'node:path';
 import { ConfigInterface } from '../shared/libs/config/config.interface.js';
 import { DatabaseClientInterface } from '../shared/libs/database-client/database-client.interface.js';
@@ -46,12 +47,14 @@ export default class Application {
   }
 
   private registerMiddleware(): void {
+    this.expressApplication.use(cors());
     this.expressApplication.use(express.json());
     this.expressApplication.use(
       UPLOADS_ROUTE_PREFIX,
       express.static(resolve(this.config.getUploadDirectoryPath()))
     );
 
+    this.logger.info('Middleware registered: cors');
     this.logger.info('Middleware registered: express.json');
     this.logger.info(`Static middleware registered: ${UPLOADS_ROUTE_PREFIX}`);
   }
