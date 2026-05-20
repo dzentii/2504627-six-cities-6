@@ -1,5 +1,5 @@
 import { Expose } from 'class-transformer';
-import { IsInt, IsMongoId, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsString, Length, Max, Min } from 'class-validator';
 
 const TEXT_MIN_LENGTH = 5;
 const TEXT_MAX_LENGTH = 1024;
@@ -17,8 +17,4 @@ export default class CreateCommentRequest {
   @Min(RATING_MIN_VALUE)
   @Max(RATING_MAX_VALUE)
   public rating!: number;
-
-  @Expose()
-  @IsMongoId()
-  public authorId!: string;
 }

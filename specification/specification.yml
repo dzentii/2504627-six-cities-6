@@ -114,6 +114,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /users/avatar:
+    post:
+      tags:
+        - Users
+      summary: Загрузка аватара текущего пользователя
+      operationId: uploadUserAvatar
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+              required:
+                - avatar
+      responses:
+        '200':
+          description: Аватар успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Некорректный файл или ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /offers:
     get:
       tags:

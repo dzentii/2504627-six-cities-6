@@ -7,6 +7,7 @@ export type ConfigValues = {
   dbPassword: string;
   salt: string;
   uploadDirectoryPath: string;
+  jwtSecret: string;
 };
 
 export interface ConfigInterface {
@@ -18,5 +19,6 @@ export interface ConfigInterface {
   getDbPassword(): string;
   getSalt(): string;
   getUploadDirectoryPath(): string;
+  getJwtSecret(): string;
   getMongoUri(): string;
 }

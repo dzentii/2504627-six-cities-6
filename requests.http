@@ -1,7 +1,8 @@
 @host = http://localhost:3000
-@userId = 64f60f5e8d6f70be8d752b65
+@authToken = paste_jwt_token_here
+@offerId = 64f60f5e8d6f70be8d752b66
 
-### Create user
+### Register user
 POST {{host}}/users/register
 Content-Type: application/json
 
@@ -12,8 +13,18 @@ Content-Type: application/json
   "userType": "pro"
 }
 
-### Upload user avatar
-POST {{host}}/users/{{userId}}/avatar
+### Login user
+POST {{host}}/users/login
+Content-Type: application/json
+
+{
+  "email": "nikita@example.com",
+  "password": "qwerty12"
+}
+
+### Upload current user avatar
+POST {{host}}/users/avatar
+Authorization: Bearer {{authToken}}
 Content-Type: multipart/form-data; boundary=----SixCitiesBoundary
 
 ------SixCitiesBoundary
@@ -22,3 +33,49 @@ Content-Type: image/jpeg
 
 < ./markup/img/avatar-max.jpg
 ------SixCitiesBoundary--
+
+### Create offer (author is taken from JWT)
+POST {{host}}/offers
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Beautiful apartment in city center",
+  "description": "Spacious apartment close to downtown with all amenities included.",
+  "postDate": "2026-05-04T12:00:00.000Z",
+  "city": "Paris",
+  "previewImage": "https://example.com/images/preview.jpg",
+  "images": [
+    "https://example.com/images/1.jpg",
+    "https://example.com/images/2.jpg",
+    "https://example.com/images/3.jpg",
+    "https://example.com/images/4.jpg",
+    "https://example.com/images/5.jpg",
+    "https://example.com/images/6.jpg"
+  ],
+  "isPremium": true,
+  "isFavorite": false,
+  "rating": 4.7,
+  "type": "apartment",
+  "bedrooms": 3,
+  "maxAdults": 4,
+  "price": 1200,
+  "goods": [
+    "Breakfast",
+    "Washer"
+  ],
+  "location": {
+    "latitude": 48.85661,
+    "longitude": 2.351499
+  }
+}
+
+### Add comment (author is taken from JWT)
+POST {{host}}/offers/{{offerId}}/comments
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "text": "Great place to stay, very comfortable and clean.",
+  "rating": 5
+}

@@ -12,6 +12,7 @@ const DATABASE_USER_ENV_NAME = 'DB_USER';
 const DATABASE_PASSWORD_ENV_NAME = 'DB_PASSWORD';
 const SALT_ENV_NAME = 'SALT';
 const UPLOAD_DIRECTORY_PATH_ENV_NAME = 'UPLOAD_DIRECTORY_PATH';
+const JWT_SECRET_ENV_NAME = 'JWT_SECRET';
 const DEFAULT_PORT_VALUE = 0;
 const DEFAULT_DATABASE_PORT_VALUE = 0;
 const EMPTY_STRING = '';
@@ -67,6 +68,12 @@ const configSchema = {
     format: String,
     default: EMPTY_STRING,
     env: UPLOAD_DIRECTORY_PATH_ENV_NAME
+  },
+  jwtSecret: {
+    doc: 'JWT signature secret',
+    format: String,
+    default: EMPTY_STRING,
+    env: JWT_SECRET_ENV_NAME
   }
 };
 
@@ -113,6 +120,10 @@ export default class ConfigService implements ConfigInterface {
     return this.config.get('uploadDirectoryPath');
   }
 
+  public getJwtSecret(): string {
+    return this.config.get('jwtSecret');
+  }
+
   public getMongoUri(): string {
     const dbUser = encodeURIComponent(this.getDbUser());
     const dbPassword = encodeURIComponent(this.getDbPassword());
@@ -133,6 +144,7 @@ export default class ConfigService implements ConfigInterface {
       DATABASE_PASSWORD_ENV_NAME,
       SALT_ENV_NAME,
       UPLOAD_DIRECTORY_PATH_ENV_NAME,
+      JWT_SECRET_ENV_NAME,
     ];
 
     for (const variableName of requiredEnvironmentVariables) {
