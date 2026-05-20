@@ -7,6 +7,8 @@ import { ExceptionFilterInterface } from './exception-filter.interface.js';
 import HttpError from './http-error.js';
 
 const INTERNAL_SERVER_ERROR_MESSAGE = 'Internal server error';
+const DUPLICATE_KEY_ERROR_CODE = 11000;
+const RESOURCE_ALREADY_EXISTS_MESSAGE = 'Resource already exists.';
 
 type ErrorResponse = {
   error: string;
@@ -21,6 +23,16 @@ export default class DefaultExceptionFilter implements ExceptionFilterInterface 
 
   public catch(error: Error, request: Request, response: Response, next: NextFunction): void {
     void next;
+
+    const errorCode = (error as Error & { code?: number }).code;
+    if (errorCode === DUPLICATE_KEY_ERROR_CODE) {
+      this.logger.error(`[${request.method}] ${request.path} ${StatusCodes.CONFLICT}: ${error.message}`);
+      response.status(StatusCodes.CONFLICT).json({
+        error: RESOURCE_ALREADY_EXISTS_MESSAGE,
+        details: [error.message]
+      } as ErrorResponse);
+      return;
+    }
 
     if (error instanceof HttpError) {
       this.logger.error(`[${request.method}] ${request.path} ${error.statusCode}: ${error.message}`);

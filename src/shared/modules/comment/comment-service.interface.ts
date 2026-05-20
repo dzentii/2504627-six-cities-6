@@ -9,7 +9,6 @@ export type CreateCommentDto = {
 };
 
 export interface CommentServiceInterface {
-  findById(id: string): Promise<CommentDocument | null>;
   findByOfferId(offerId: string, limit?: number): Promise<CommentDocument[]>;
   create(data: CreateCommentDto): Promise<CommentDocument>;
   deleteByOfferId(offerId: string): Promise<number>;

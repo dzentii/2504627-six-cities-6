@@ -9,7 +9,7 @@ import { UserDocument, UserEntity } from './user.entity.js';
 const PASSWORD_HASH_ALGORITHM = 'sha256';
 const PASSWORD_HASH_ENCODING = 'hex';
 const PASSWORD_SALT_SEPARATOR = ':';
-const DEFAULT_AVATAR_PATH = 'default-avatar.png';
+const DEFAULT_AVATAR_PATH = '/img/avatar.svg';
 
 @injectable()
 export default class DefaultUserService implements UserServiceInterface {

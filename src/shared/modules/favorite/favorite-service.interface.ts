@@ -10,6 +10,5 @@ export interface FavoriteServiceInterface {
   findByUserIdAndOfferIds(userId: string, offerIds: string[]): Promise<FavoriteDocument[]>;
   add(data: CreateFavoriteDto): Promise<FavoriteDocument>;
   remove(userId: string, offerId: string): Promise<number>;
-  exists(userId: string, offerId: string): Promise<boolean>;
   removeByOfferId(offerId: string): Promise<number>;
 }

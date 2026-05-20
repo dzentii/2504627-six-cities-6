@@ -15,6 +15,8 @@ import { Component } from '../shared/types/component.enum.js';
 const USERS_ROUTE_PREFIX = '/users';
 const OFFERS_ROUTE_PREFIX = '/offers';
 const UPLOADS_ROUTE_PREFIX = '/upload';
+const IMAGES_ROUTE_PREFIX = '/img';
+const IMAGES_DIRECTORY_PATH = 'markup/img';
 
 @injectable()
 export default class Application {
@@ -53,10 +55,15 @@ export default class Application {
       UPLOADS_ROUTE_PREFIX,
       express.static(resolve(this.config.getUploadDirectoryPath()))
     );
+    this.expressApplication.use(
+      IMAGES_ROUTE_PREFIX,
+      express.static(resolve(IMAGES_DIRECTORY_PATH))
+    );
 
     this.logger.info('Middleware registered: cors');
     this.logger.info('Middleware registered: express.json');
     this.logger.info(`Static middleware registered: ${UPLOADS_ROUTE_PREFIX}`);
+    this.logger.info(`Static middleware registered: ${IMAGES_ROUTE_PREFIX}`);
   }
 
   private registerRoutes(): void {
